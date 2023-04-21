@@ -12,8 +12,8 @@ app.get('/api/chords', async (req, res) => {
 });
 
 app.get('/api/tabs', async (req, res) => {
-  const lyrics = await scrapeUG(req.query.url);
-  res.json({lyrics: lyrics});
+  const tab = await scrapeUG(req.query.url);
+  res.json({tab: tab});
 });
 
 app.get('/api/tabs/search', async (req, res) => {
@@ -45,71 +45,58 @@ async function scrapeUG(url) {
   let url = 'https://www.ultimate-guitar.com/search.php?search_type=title&value=';
   url += title;
 
-  await page.goto(url);
+  await page.goto(url, {waitUntil: 'load', timeout: 0});
   const tabs = await page.$$eval("body > div.js-page.js-global-wrapper > div.fbcII > main > div.BDmSP > div.XwpqK > section > article > div > div.LQUZJ", (tabList) => {
     return tabList.map(x => x.innerHTML);
   });
 
+  let idx = 0;
+  let newTabs = tabs.map((x) => {
+    if (idx === 0) {
+      idx++;
+      return;
+    }
+    let tab = {
+        href: null,
+        songName: '',
+        type: null,
+        rating: 0
+      };
+
+      let TAB_TYPE = {
+        OFFICIAL: 'Official',
+        PRO: 'Pro',
+        CHORDS: 'chords',
+        TAB: 'tab',
+        BASS: 'bass'
+      };
+      const document = new JSDOM(x).window.document
+      let type = document.querySelector('.lIKMM.PdXKy').innerHTML;
+      switch (type) {
+        case TAB_TYPE.CHORDS:
+          tab.type = type;
+          break;
+        case TAB_TYPE.TAB:
+          tab.type = type;
+          break;
+        case TAB_TYPE.BASS:
+          tab.type = type;
+          break;
+        case TAB_TYPE.OFFICIAL:
+        case TAB_TYPE.PRO:
+        default: return;
+      }
+
+      let aTag = document.querySelector('.aPPf7.HT3w5.lBssT');
+      tab.href = aTag.href;
+      tab.songName = aTag.textContent;
+
+      let rating = document.querySelector('.djFV9');
+      tab.rating = rating ? rating.textContent : null;
+
+      return tab;
+  });
+
   await page.close();
-
-    let newTabs = tabs.map((x) => {
-      let tab = {
-          href: null,
-          songName: '',
-          type: null,
-          rating: 0
-        };
-
-        let TAB_TYPE = {
-          OFFICIAL: 'Official',
-          PRO: 'Pro',
-          CHORDS: 'Chords',
-          TAB: 'Tab',
-          BASS: 'Bass'
-        };
-        const document = new JSDOM(x.innerHtml).window.document;
-        let aTag = document.getElementsByClassName('aPPf7 jtEAE lBssT')[0];
-        console.log(aTag);
-        tab.href = aTag.href;
-        tab.songName = aTag.innerText;
-
-        let rating = document.getElementsByClassName('djFV9').innerText;
-        tab.rating = rating;
-
-        let type = document.getElementsByClassName('lIKMM PdXKy')[0];
-        switch (type.innerText) {
-          case TAB_TYPE.CHORDS:
-            tab.type = type.innerText;
-            break;
-          case TAB_TYPE.TAB:
-            tab.type = type.innerText;
-            break;
-          case TAB_TYPE.BASS:
-            tab.type = type.innerText;
-            break;
-          case TAB_TYPE.OFFICIAL:
-          case TAB_TYPE.PRO:
-          default: return;
-        }
-
-        return tab;
-    });
-
-  return newTabs;
+  return newTabs.filter((tab) => { return tab !== undefined; });
 }
-
-
-
-
-/**
-  check lIKMM PdXKy for type of tab
-  - remove offical/pro tabs
-  - pull href from <a> tag (className = aPPf7 jtEAE lBssT)
-  - pull innerText for songName (className = aPPf7 jtEAE lBssT) (innerText)
-  pull rating from song (className = djFV9)
-  pull type (tab/chords) (className = lIKMM PdXKy)
-  - two separate lists
-    6-string (chords/tabs)
-    Bass tabs
-  song name = className(aPPf7 HT3w5 lBssT) - innerText
- */
