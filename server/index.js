@@ -45,13 +45,13 @@ async function scrapeUG(url) {
   let url = 'https://www.ultimate-guitar.com/search.php?search_type=title&value=';
   url += title;
 
-  await page.goto(url, {waitUntil: 'load', timeout: 0});
-  const tabs = await page.$$eval("body > div.js-page.js-global-wrapper > div.fbcII > main > div.BDmSP > div.XwpqK > section > article > div > div.LQUZJ", (tabList) => {
-    return tabList.map(x => x.innerHTML);
-  });
+    await page.goto(url, {waitUntil: 'networkidle2', timeout: 10000});
+    const tabs = await page.$$eval("body > div.js-page.js-global-wrapper > div.fbcII > main > div.BDmSP > div.XwpqK > section > article > div > div.LQUZJ", (tabList) => {
+      return tabList.map(x => x.innerHTML);
+    });
 
-  let idx = 0;
-  let newTabs = tabs.map((x) => {
+    let idx = 0;
+    let newTabs = tabs.map((x) => {
     if (idx === 0) {
       idx++;
       return;
