@@ -6,11 +6,6 @@ const { JSDOM } = require('jsdom');
 
 const app = express();
 
-app.get('/api/chords', async (req, res) => {
-  const lyrics = await scrapeUG(req.query.url);
-  res.json({lyrics: lyrics});
-});
-
 app.get('/api/tabs', async (req, res) => {
   const tab = await scrapeUG(req.query.url);
   res.json({tab: tab});
